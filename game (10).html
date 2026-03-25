@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Free-Time Activities Match-Up</title>
+    <style>
+        /* 1. Global Reset & Modern Font */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #eef2f3; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px;
+            min-height: 100vh;
+            overflow-x: hidden; /* Prevent horizontal scroll during drag */
+        }
+
+        h1 { 
+            color: #2c3e50; 
+            margin-bottom: 30px; 
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        /* 2. Responsive Wrapper */
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            width: 100%;
+            max-width: 1100px;
+        }
+
+        @media (orientation: landscape) and (min-width: 900px) {
+            .main-wrapper {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+            .words-container {
+                width: 300px;
+                position: sticky;
+                top: 20px;
+            }
+        }
+
+        /* 3. The Grid */
+        .game-container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+            gap: 20px; 
+            flex: 1;
+        }
+
+        /* 4. The Drop Zones (The "Cards") */
+        .drop-zone {
+            background: white; 
+            border: 3px solid #dfe6e9;
+            border-radius: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            justify-content: center;
+            padding: 15px; 
+            transition: background 0.3s, border-color 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            min-height: 180px;
+        }
+
+        /* BIG Emojis */
+        .icon-box { 
+            width: 100%;
+            aspect-ratio: 1/1;
+            border-radius: 15px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 4rem; 
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        /* 5. Word Bank Styling */
+        .words-container { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 12px; 
+            background: rgba(255, 255, 255, 0.8); 
+            padding: 25px; 
+            border-radius: 20px; 
+            backdrop-filter: blur(5px);
+            border: 1px solid #fff;
+            min-height: 100px;
+        }
+
+        .word {
+            padding: 12px 20px; 
+            background: white; 
+            border: 2px solid #3498db; 
+            border-radius: 12px;
+            cursor: grab; 
+            touch-action: none; 
+            user-select: none;
+            -webkit-user-select: none;
+            font-weight: 600;
+            color: #2c3e50;
+            box-shadow: 0 4px 0 #2980b9;
+            width: max-content;
+            height: max-content;
+            z-index: 10;
+        }
+
+        /* 6. Feedback States */
+        .correct { 
+            background: #dff9fb !important; 
+            border-color: #2ecc71 !important; 
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+
+        .label { 
+            margin-top: 15px;
+            font-weight: 700;
+            color: #95a5a6;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+        
+        .correct .label {
+            color: #27ae60;
+            font-size: 1rem;
+        }
+
+        /* Color Gradients */
+        .bg-red { background: linear-gradient(135deg, #ff7675, #d63031); }
+        .bg-gold { background: linear-gradient(135deg, #ffeaa7, #fdcb6e); }
+        .bg-green { background: linear-gradient(135deg, #55efc4, #00b894); }
+        .bg-blue { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+    </style>
+</head>
+<body>
+
+    <h1>Match the Activities</h1>
+    <div class="main-wrapper">
+        <div class="game-container" id="gameGrid"></div>
+        <div class="words-container" id="wordBank"></div>
+    </div>
+
+    <script>
+        const activities = [
+            { id: 1, name: "singing", color: "bg-red", icon: "🎤" },
+            { id: 2, name: "acting", color: "bg-gold", icon: "🎭" },
+            { id: 3, name: "dancing", color: "bg-green", icon: "💃" },
+            { id: 4, name: "swimming", color: "bg-blue", icon: "🏊" },
+            { id: 5, name: "rock climbing", color: "bg-blue", icon: "🧗" },
+            { id: 6, name: "drawing", color: "bg-green", icon: "✏️" },
+            { id: 7, name: "painting", color: "bg-red", icon: "🎨" },
+            { id: 8, name: "playing computer games", color: "bg-gold", icon: "🎮" },
+            { id: 9, name: "making a film", color: "bg-green", icon: "🎬" },
+            { id: 10, name: "playing the drums", color: "bg-red", icon: "🥁" },
+            { id: 11, name: "doing photography", color: "bg-gold", icon: "📸" },
+            { id: 12, name: "skateboarding", color: "bg-blue", icon: "🛹" }
+        ];
+
+        const gameGrid = document.getElementById('gameGrid');
+        const wordBank = document.getElementById('wordBank');
+
+        // Initial setup
+        activities.forEach(act => {
+            const zone = document.createElement('div');
+            zone.className = 'drop-zone';
+            zone.dataset.match = act.name;
+            zone.innerHTML = `<div class="icon-box ${act.color}">${act.icon}</div><div class="label">???</div>`;
+            zone.addEventListener('dragover', e => e.preventDefault());
+            zone.addEventListener('drop', handleDrop);
+            gameGrid.appendChild(zone);
+        });
+
+        [...activities].sort(() => Math.random() - 0.5).forEach(act => {
+            const word = document.createElement('div');
+            word.className = 'word';
+            word.draggable = true;
+            word.innerText = act.name;
+            word.id = `word-${act.id}`;
+            word.addEventListener('dragstart', e => e.dataTransfer.setData('text', e.target.id));
+            word.addEventListener('touchstart', handleTouchStart, { passive: false });
+            word.addEventListener('touchmove', handleTouchMove, { passive: false });
+            word.addEventListener('touchend', handleTouchEnd);
+            wordBank.appendChild(word);
+        });
+
+        // MOUSE LOGIC
+        function handleDrop(e) {
+            e.preventDefault();
+            const wordId = e.dataTransfer.getData('text');
+            const wordElem = document.getElementById(wordId);
+            const dropZone = e.currentTarget;
+
+            if (wordElem.innerText === dropZone.dataset.match) {
+                dropZone.querySelector('.label').innerText = wordElem.innerText;
+                dropZone.classList.add('correct');
+                wordElem.remove();
+                checkWin();
+            }
+        }
+
+        // TOUCH LOGIC
+        let activeToken = null;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        function handleTouchStart(e) {
+            activeToken = e.target;
+            const touch = e.touches[0];
+            const rect = activeToken.getBoundingClientRect();
+            
+            offsetX = touch.clientX - rect.left;
+            offsetY = touch.clientY - rect.top;
+            activeToken.style.zIndex = '1000';
+        }
+
+        function handleTouchMove(e) {
+            if (!activeToken) return;
+            e.preventDefault(); 
+            const touch = e.touches[0];
+            
+            // Move to body to avoid container coordinate traps
+            if (activeToken.parentNode !== document.body) {
+                document.body.appendChild(activeToken);
+            }
+            
+            activeToken.style.position = 'fixed';
+            activeToken.style.left = (touch.clientX - offsetX) + 'px';
+            activeToken.style.top = (touch.clientY - offsetY) + 'px';
+            activeToken.style.transform = 'scale(1.1) rotate(2deg)';
+        }
+
+        function handleTouchEnd(e) {
+            if (!activeToken) return;
+            const touch = e.changedTouches[0];
+            
+            activeToken.style.display = 'none';
+            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+            activeToken.style.display = 'block';
+
+            const zone = dropTarget?.closest('.drop-zone');
+
+            if (zone && activeToken.innerText === zone.dataset.match) {
+                zone.querySelector('.label').innerText = activeToken.innerText;
+                zone.classList.add('correct');
+                activeToken.remove();
+                checkWin();
+            } else {
+                activeToken.style.position = 'static';
+                activeToken.style.transform = 'none';
+                activeToken.style.zIndex = 'auto';
+                wordBank.appendChild(activeToken);
+            }
+            activeToken = null;
+        }
+
+        function checkWin() {
+            const matched = document.querySelectorAll('.correct').length;
+            if (matched === activities.length) {
+                setTimeout(() => alert("Perfect! You've matched all the activities! 🎉"), 300);
+            }
+        }
+    </script>
+</body>
+</html>
