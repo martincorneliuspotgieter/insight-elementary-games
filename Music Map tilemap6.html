@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ESL Pac-Snake Engine</title>
+    <script src="https://unpkg.com/kaboom@3000.1.17/dist/kaboom.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; background: #222; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+<script>
+    kaboom({ 
+        background: [0, 0, 0],
+        font: "monospace" 
+    });
+
+    loadSprite("monster-idle", "https://raw.githubusercontent.com/martincorneliuspotgieter/insight-elementary-games/main/monster_open_mouth5.png"); 
+    loadSprite("monster-bite", "https://raw.githubusercontent.com/martincorneliuspotgieter/insight-elementary-games/main/monster_closed_mouth5.png");
+    loadSprite("monster-big", "https://raw.githubusercontent.com/martincorneliuspotgieter/insight-elementary-games/main/monster_closed_mouth4.png");
+
+
+    loadSound("hit-tail", "https://raw.githubusercontent.com/martincorneliuspotgieter/insight-elementary-games/main/bumpintowall.mp3");
+    loadSound("itemfound", "https://raw.githubusercontent.com/martincorneliuspotgieter/insight-elementary-games/main/itemfound.mp3");
+    loadSound("wow", "https://raw.githubusercontent.com/martincorneliuspotgieter/insight-elementary-games/main/wow.mp3");
+
+    const TILE_W = 12;
+    const TILE_H = 16.5;
+    
+    const lessonMap = [
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢ŋŋŋŋŋŋŋŋŋMusic MadŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋVarinder Gupta                                       ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢ŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋI love rock music and hip hop, but                   ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢ŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋ25ŋI also love traditional Indian music –               ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢It's ten o'clock in the morning. On a small   ŋŋŋŋŋŋŋŋŋit's the music I heard as a child                    ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢campsite in Milton Keynes, there's a very     ŋŋŋŋŋŋŋŋŋbefore my family moved to the UK                     ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢noisy drumming lesson. A campsite isn't the   ŋŋŋŋŋŋŋŋŋa few years ago. I can play the sitar,               ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢usual place for a drumming lesson, but this   ŋŋŋŋŋŋŋŋŋwhich is a stringed instrument, and the tabla,       ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢5¢isn't an ordinary music lesson.               ŋŋŋŋŋŋ30ŋwhich is like a drum. Can I sing? No, I can't. I'm   ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢ŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋnot very good at singing, but that's not important   ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢Every August, young people from around the    ŋŋŋŋŋŋŋŋŋhere. It's all about learning new things and         ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢UK come to the National Youth Music Camps     ŋŋŋŋŋŋŋŋŋsharing ideas. We can meet new people, learn         ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢at the Stables Theatre in Milton Keynes and   ŋŋŋŋŋŋŋŋŋnew instruments and discover music from other        ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢play music together for a week. Some young    ŋŋŋŋŋŋ35ŋcultures. It's so interesting. I want to learn about ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢10¢people are very good musicians and they       ŋŋŋŋŋŋŋŋŋChinese traditional music and R & B.                 ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢can play different instruments. Some young    ŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢people can't play an instrument and some      ŋŋŋŋŋŋŋŋŋTamara Huerta                                        ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢haven't got an instrument. But everyone is    ŋŋŋŋŋŋŋŋŋI can play the cello. I always play                  ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢welcome at the camp and there are lots of     ŋŋŋŋŋŋŋŋŋclassical music, but at Music Camp                   ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢15¢instruments for everybody.                    ŋŋŋŋŋŋ40ŋI play my cello with the jazz band.                  ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢ŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋIt isn't easy to play jazz music, but                ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢The young people and teachers sleep in tents. ŋŋŋŋŋŋŋŋŋwe can play some great jazz songs.                   ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢They have music lessons on the campsite and   ŋŋŋŋŋŋŋŋŋI also love tango – it's a famous dance from         ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢they have breakfast, lunch and dinner togetherŋŋŋŋŋŋŋŋŋArgentina, where my dad comes from. But here         ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢in a big tent. There is also a theatre and a  ŋŋŋŋŋŋ45ŋat the camp, people are music mad. They're           ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢20¢recording studio. The young people act, sing  ŋŋŋŋŋŋŋŋŋinto all kinds of things – folk, hip hop, blues – it ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢and dance in the theatre. At the end of the   ŋŋŋŋŋŋŋŋŋdoesn't matter. I think it's great to have so many   ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢week, they perform a special concert.         ŋŋŋŋŋŋŋŋŋŋdifferent types of music all in one place.          ¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢ŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋŋ¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢6 Read the article again. Are the sentences true (T) or***¢¢¢*******************************************************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢**false (F)? Correct the false sentences.*****************¢¢¢*******************************************************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢********************************************************¢¢¢*******************************************************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢1 The young people stay at the camp for one week.*******¢¢¢4 The young people watch a special performance by *****¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢********************************************************¢¢¢**professional musicians.******************************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢********************************************************¢¢¢*******************************************************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢2 The young people can learn new instruments.***********¢¢¢*******************************************************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢********************************************************¢¢¢5 Varinder thinks it's important to sing at Music Camp.¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢********************************************************¢¢¢*******************************************************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢3 All the young people at the camp are very good********¢¢¢*******************************************************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢**musicians.********************************************¢¢¢6 Tamara usually plays jazz music.*********************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢********************************************************¢¢¢*******************************************************¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢",
+        "¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢¢"    
+    ];
+
+    const MAP_WIDTH = lessonMap[0].length * TILE_W;
+    const MAP_HEIGHT = lessonMap.length * TILE_H;
+    
+    
+
+    const gameProgress = {
+        "25,37": { line: 15,  done: false }, 
+        //"35,37": { line: 6,  done: false },
+        "25,40": { line: 14, done: false }, 
+        //"35,40": { line: 15, done: false },
+        //"25,44": { line: 14, done: false }, 
+        "35,44": { line: 18, done: false },
+        //"87,38": { line: 30, done: false }, 
+        "97,38": { line: 29, done: false },
+        //"87,41": { line: 10, done: false }, 
+        "97,41": { line: 11, done: false },
+        //"87,44": { line: 19, done: false }, 
+        "97,44": { line: 20, done: false },
+    };
+
+    let underlinedLines = new Set();
+
+    const tileConf = {
+        tileWidth: TILE_W,
+        tileHeight: TILE_H,
+        tiles: {
+            "*": () => [rect(TILE_W, TILE_H), color(0, 0, 0), "question"],
+            "ŋ": () => [rect(TILE_W, TILE_H), color(0, 0, 0), "text"],
+            "¢": () => [rect(TILE_W, TILE_H), color(0, 0, 0)],
+            ".": () => [text(".", { size: 16 }), color(255, 255, 255)],
+            " ": () => [text(" ", { size: 16 }), color(0, 0, 0)]
+        }
+    };
+
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-?'&,–■()".split("").forEach(char => {
+        tileConf.tiles[char] = () => [text(char, { size: 16, font: "monospace" }), color(255, 255, 255)];
+    });
+
+    addLevel(lessonMap, tileConf);
+
+    const segments = [];
+    const SNAKE_LENGTH = 6;
+
+    for (let i = 0; i < SNAKE_LENGTH; i++) {
+        const isHead = (i === 0);
+        const seg = add([
+        isHead ? sprite("monster-idle") : rect(TILE_W, TILE_H), // Changed TILE_H / 2 to TILE_H
+        isHead ? sprite("monster-idle", { width: TILE_W * 2, height: TILE_H * 2 }) : color(180, 0, 0),
+            pos(TILE_W * (10 - i), isHead ? (TILE_H * 5) - TILE_H : TILE_H * 5),
+            rotate(0),
+            isHead ? anchor("center") : anchor("topleft"),
+            opacity(isHead ? 1 : 0.7),
+            z(10),
+            "player"
+        ]);
+
+
+        segments.push(seg);
+    }
+
+    const head = segments[0];
+    let moveTimer = 0;
+    const MOVE_SPEED = 0.05; 
+    let isDrawing = false;
+
+    function moveSnake(dx, dy) {
+        // 1. Calculate where the head WOULD go
+        let nextX = head.pos.x + dx;
+        let nextY = head.pos.y + dy;
+
+        // Apply Screen Wrapping to the "next" coordinates so the check is accurate
+        if (nextX < 0) nextX = MAP_WIDTH - TILE_W;
+        else if (nextX >= MAP_WIDTH) nextX = 0;
+        if (nextY < 0) nextY = MAP_HEIGHT - TILE_H;
+        else if (nextY >= MAP_HEIGHT) nextY = 0;
+
+        // 2. Check if any tail segment is already at that "next" position
+        // We skip index 0 (the head) and 1 (the segment right behind the head)
+        const hitTail = segments.slice(2).some(seg => 
+            Math.round(seg.pos.x) === Math.round(nextX) && 
+            Math.round(seg.pos.y) === Math.round(nextY)
+        );
+
+        if (hitTail) {
+            play("hit-tail"); // Play your sound effect
+            debug.log("Ouch! You bit your own tongue!");
+            return; // EXIT the function early so the monster doesn't move
+        }
+
+        // 3. If no collision, proceed with movement
+        const currentPosSnapshot = segments.map(seg => ({ x: seg.pos.x, y: seg.pos.y }));
+    
+        // 1. Move the Head
+        head.pos.x += dx;
+        head.pos.y += dy;
+
+        // 2. WRAPPING LOGIC (The new part!)
+        // Horizontal wrap
+        if (head.pos.x < 0) head.pos.x = MAP_WIDTH - TILE_W;
+        else if (head.pos.x >= MAP_WIDTH) head.pos.x = 0;
+
+        // Vertical wrap
+        if (head.pos.y < 0) head.pos.y = MAP_HEIGHT - TILE_H;
+        else if (head.pos.y >= MAP_HEIGHT) head.pos.y = 0;
+
+        // 3. Move the Tail (Your existing loop follows here...)
+        for (let i = 1; i < segments.length; i++) {
+            const prevPos = currentPosSnapshot[i - 1];
+            segments[i].pos.x = prevPos.x;
+            segments[i].pos.y = prevPos.y;
+
+            segments[i].width = TILE_W;
+            segments[i].height = TILE_H;
+
+            // Use TILE_W/2 to center horizontally, 
+            // but 0 for Y to align with the highlight spawn point
+            segments[i].offset = vec2(TILE_W / 2, 0); 
+        }
+
+        // --- 4. THE EATING LOGIC ---
+        const col = Math.round(head.pos.x / TILE_W);
+        const row = Math.round(head.pos.y / TILE_H);
+
+        // We check every icon to see if the head is overlapping its 2x2 area
+        const target = get("icon").find(icon => {
+            const iconCol = Math.round(icon.pos.x / TILE_W);
+            const iconRow = Math.round(icon.pos.y / TILE_H);
+            
+            // Check if monster is within 1 tile of the icon's center
+            return Math.abs(col - iconCol) <= 1 && Math.abs(row - iconRow) <= 1;
+        });
+
+        if (target) {
+        const iconKey = `${Math.round((target.pos.x - TILE_W)/TILE_W)},${Math.round((target.pos.y - TILE_H)/TILE_H)}`;
+        const requirement = gameProgress[iconKey];
+
+        if (requirement && underlinedLines.has(requirement.line)) {
+            // Save the info we need before destroying
+            const eatenText = target.text;
+            const eatenY = target.pos.y;
+            const eatenX = target.pos.x;
+            const isTick = (eatenText === "✔");
+
+            // We check if the vertical position matches the bottom row (Row 44/45)
+            // Adding TILE_H accounts for the centering math we did in Section 6
+            const isBottomRow = Math.abs(target.pos.y - (44 * TILE_H + TILE_H)) < 10;
+            const isRightSide = target.pos.x > (80 * TILE_W); 
+            
+            const isQuestionSix = isBottomRow && isRightSide;
+            
+            if (isQuestionSix) {
+                play("wow");
+                // Wait a tiny fraction of a second so the sound starts 
+                // before the monster disappears
+                wait(0.1, () => {
+                    triggerVictory(); });
+            } else {
+                play("itemfound"); 
+            }
+            // ---------------------------
+
+            // 1. Find and destroy BOTH icons for this question
+            get("icon").forEach(icon => {
+                if (Math.abs(icon.pos.y - eatenY) < 10 && Math.abs(icon.pos.x - eatenX) < 150) {
+                    destroy(icon);
+                }
+            });
+
+            // 2. Re-spawn the correct icon in the "middle"
+            // Adjust the X offset to find the center between the original Tick and Cross
+            const centerX = isTick ? eatenX + (5 * TILE_W) : eatenX - (5 * TILE_W);
+            
+            add([
+                text(eatenText, { size: eatenText === "✔" ? TILE_H * 2 : TILE_H * 2.5 }),
+                pos(centerX, eatenY),
+                color(isTick ? rgb(0, 255, 0) : rgb(255, 0, 0)),
+                anchor("center"),
+                z(50),
+                // We don't give this new one the "icon" tag so the monster doesn't eat it again
+            ]);
+
+            // 3. True Doubling Growth
+            growTongue(segments.length); 
+
+            // 4. Feedback
+            add([
+                text("YUM!", { size: 14, font: "monospace" }),
+                pos(head.pos),
+                move(UP, 60),
+                lifespan(0.5),
+                color(255, 255, 0),
+                anchor("center")
+            ]);
+            
+            debug.log("Evidence verified. Tongue doubled!"); 
+        } else if (requirement) {
+            debug.log(`Get the evidence first!`);
+        }
+    }
+    }
+
+    const icons = [
+        {x: 25, y: 37, t: "✔"}, {x: 35, y: 37, t: "✘"},
+        {x: 25, y: 40, t: "✔"}, {x: 35, y: 40, t: "✘"},
+        {x: 25, y: 44, t: "✔"}, {x: 35, y: 44, t: "✘"},
+        {x: 87, y: 38, t: "✔"}, {x: 97, y: 38, t: "✘"},
+        {x: 87, y: 41, t: "✔"}, {x: 97, y: 41, t: "✘"},
+        {x: 87, y: 44, t: "✔"}, {x: 97, y: 44, t: "✘"}
+    ];
+
+    icons.forEach(i => {
+    add([
+        // Double the size: TILE_H * 3 for ticks, * 4 for crosses (adjust to taste)
+        text(i.t, { size: i.t === "✔" ? TILE_H * 2 : TILE_H * 2 }), 
+        // Position them at the center of a 2x2 block
+        pos((i.x * TILE_W) + TILE_W, (i.y * TILE_H) + TILE_H),
+        color(i.t === "✔" ? rgb(0, 255, 0) : rgb(255, 0, 0)),
+        anchor("center"), // Centering is key for the 2x2 feel
+        z(50),
+        "icon"
+    ]);
+    });
+
+    onKeyDown("space", () => isDrawing = true);
+    onKeyRelease("space", () => isDrawing = false);
+    onKeyPress("c", () => {
+        destroyAll("trail");
+        underlinedLines.clear();
+    
+    });
+
+    function growTongue(amount) {
+    for (let i = 0; i < amount; i++) {
+        const lastSeg = segments[segments.length - 1];
+        
+        const newSeg = add([
+            rect(TILE_W, TILE_H),
+            color(180, 0, 0), // Same blood red
+            pos(lastSeg.pos.x, lastSeg.pos.y),
+            anchor("topleft"),
+            opacity(0.7),
+            z(10),
+            "player"
+        ]);
+
+        segments.push(newSeg);
+    }
+}
+
+    onKeyPress("l", () => {
+        console.log(`Grid: Col ${Math.round(head.pos.x/TILE_W)}, Row ${Math.round(head.pos.y/TILE_H)}`);})
+
+    onUpdate(() => {
+        let dx = 0, dy = 0;
+
+        // 1. MOVEMENT INPUT (Inside onUpdate)
+        if (isKeyDown("left")) { 
+            dx = -TILE_W; 
+            head.flipX = true;  // This flips the sprite so it faces left naturally
+            head.angle = 0;     
+        }
+        else if (isKeyDown("right")) { 
+            dx = TILE_W; 
+            head.flipX = false; // This resets it to face right
+            head.angle = 0; 
+        }
+        else if (isKeyDown("up")) { 
+            dy = -TILE_H; 
+            head.flipX = false; 
+            head.angle = -90; 
+        }
+        else if (isKeyDown("down")) { 
+            dy = TILE_H; 
+            head.flipX = false;
+            head.angle = 90; 
+        }
+
+        if (dx !== 0 || dy !== 0) {
+            moveTimer += dt();
+            if (moveTimer >= MOVE_SPEED) {
+                moveSnake(dx, dy);
+                moveTimer = 0;
+            }
+        } else {
+            moveTimer = MOVE_SPEED;
+        }
+
+        if (isDrawing) {
+            const currentRow = Math.round(head.pos.y / TILE_H);
+            if (currentRow <= 31) {
+                underlinedLines.add(currentRow);
+                // Inside onUpdate -> HIGHLIGHTER LOGIC
+            add([
+                rect(TILE_W, TILE_H),
+                // Shifted X to align with grid, but Y stays at head.pos.y to match the center
+                pos(head.pos.x - (TILE_W / 2), head.pos.y), 
+                color(180, 0, 0),
+                opacity(0.4),
+                z(5),
+                "trail"
+            ]);
+            }
+            head.use(sprite("monster-bite")); 
+            
+        } else {
+            head.use(sprite("monster-idle")); 
+            
+        }
+    });
+
+    function triggerVictory() {
+    // 1. Stop the game logic by destroying the player segments
+    segments.forEach(seg => destroy(seg));
+
+    // 2. Add the BIG monster in the middle of the screen
+    // We use MAP_WIDTH and MAP_HEIGHT to find the center
+    add([
+        sprite("monster-big", { width: TILE_W * 45, height: TILE_H * 30 }),
+        pos(MAP_WIDTH / 2, MAP_HEIGHT / 2),
+        anchor("center"),
+        z(100),
+        "victory-content"
+    ]);
+
+    // 4. Add the VICTORY text
+    add([
+        text("VICTORY!", { 
+            size: 100, 
+            font: "monospace",
+            width: 600,
+        }),
+        pos(MAP_WIDTH / 2, (MAP_HEIGHT / 2) - 300),
+        color(255, 105, 180), // Hot Pink
+        anchor("center"),
+        z(100),
+        "victory-content"
+    ]);
+    }
+</script>
+</body>
+</html>
