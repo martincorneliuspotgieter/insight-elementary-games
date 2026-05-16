@@ -1,3 +1,5 @@
+import { buildSentence } from "sentencebuilder.js";
+
 // Initialize the KAPLAY engine instance.
         // This function automatically creates an HTML5 <canvas> element and injects it into the body.
         kaplay({
@@ -8,4 +10,4 @@
             letterbox: true, 
         });
 
-import { buildSentence } from "sentencebuilder.js";
+
