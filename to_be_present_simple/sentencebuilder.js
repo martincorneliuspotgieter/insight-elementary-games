@@ -11,3 +11,8 @@ buildSentence({
     currentSolution: "They do not\xa0often gymnastics in the morning.",
     currentTest: "They do gymnastics in the morning."
 });
+
+export function buildSentence(config) {
+    console.log("Sentence builder module loaded!");
+    // ... all your block building code remains exactly the same ...
+}
