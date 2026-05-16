@@ -8,7 +8,3 @@
             letterbox: true, 
         });
 
-export function buildSentence(config) {
-    console.log("Sentence builder module loaded!");
-    // ... all your block building code remains exactly the same ...
-}
