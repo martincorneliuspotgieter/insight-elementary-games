@@ -1,20 +1,9 @@
-// test.js
-
-// 1. Start the game engine canvas
-kaplay({
-    background: [135, 206, 235], // Sky Blue
-});
-
-// 2. Create some dummy data to test the function's states
-const mockWords = ["They", "do", "gymnastics", "in", "the", "morning."];
-
-// 3. Call your imported function!
-buildSentence({
-    showSlot: true,
-    sentenceWords: mockWords,
-    SLOT_WIDTH: 120,
-    START_Y: 200,
-    correctAdverb: "not\xa0often",
-    currentSolution: "They do not\xa0often gymnastics in the morning.",
-    currentTest: "They do gymnastics in the morning."
-});
+// Initialize the KAPLAY engine instance.
+        // This function automatically creates an HTML5 <canvas> element and injects it into the body.
+        kaplay({
+            background: [135, 206, 235], 
+            width: window.innerWidth,
+            height: window.innerHeight,
+            // Keeps your game aspect ratio consistent if the window is resized (prevents stretching distortion)
+            letterbox: true, 
+        });
